@@ -70,7 +70,7 @@ def handler_message_settings(message):
 
 @bot.message_handler(func=lambda m: constants.START_KB[constants.NEWS] == m.text)
 def handler_message_news(message):
-    print('handler message news')
+    print('handler message news ')
     news = News.objects()
     sorted_news = []
 
