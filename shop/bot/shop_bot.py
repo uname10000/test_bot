@@ -1,18 +1,34 @@
 import json
+import time
 
 from telebot import TeleBot
-from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, Message, Update
 from mongoengine import NotUniqueError
+
+from flask import Flask, request, abort
 
 from ..models.shop_models import Category, User, Product
 from ..models.extra_models import News
-from .config import TOKEN
+from .config import TOKEN, WEBHOOK_URL
 from .utils import inline_kb_from_iterable
 from . import constants
 
 # botname: Shptestbot
 # bot username: Shptest_bot
 bot = TeleBot(TOKEN)
+
+app = Flask(__name__)
+
+
+@app.route(WEBHOOK_URL)
+def handle_webhook():
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data()
+        update = Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return ''
+
+    abort(403)
 
 
 @bot.message_handler(commands=['start'])
@@ -80,7 +96,7 @@ def handler_settings(message):
 def handler_message_cart(message):
     print('handler message cart')
 
-
+bot.remove_webhook()
 @bot.message_handler(func=lambda m: constants.START_KB[constants.SETTINGS] == m.text)
 def handler_message_settings(message):
     print('handler message settings')
@@ -173,3 +189,4 @@ def handle_add_to_cart(call):
 # @bot.message_handler(content_types=['text'])
 # def handler_test(message):
 #     print('handler text')
+
