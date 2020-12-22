@@ -1,9 +1,10 @@
 import json
 
 from telebot import TeleBot
-from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from mongoengine import NotUniqueError
 
-from ..models.shop_models import Category
+from ..models.shop_models import Category, User, Product
 from ..models.extra_models import News
 from .config import TOKEN
 from .utils import inline_kb_from_iterable
@@ -16,9 +17,17 @@ bot = TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
 def handle_start(message):
-    # print('start handler')
-    name = f' {message.from_user.first_name}' if getattr(message.from_user, 'first_name') else ''
-    greetings = constants.GREETINGS.format(name)
+    try:
+        User.objects.create(
+            telegram_id=message.chat.id,
+            username=getattr(message.from_user, 'username', None),
+            first_name=getattr(message.from_user, 'first_name', None)
+        )
+    except NotUniqueError:
+        greetings = 'Рады снова тебя видеть'
+    else:
+        name = f' {message.from_user.first_name}' if getattr(message.from_user, 'first_name') else ''
+        greetings = constants.GREETINGS.format(name)
 
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     buttons = [KeyboardButton(n) for n in constants.START_KB.values()]
@@ -28,7 +37,7 @@ def handle_start(message):
 
 
 @bot.message_handler(func=lambda m: constants.START_KB[constants.CATEGORIES] == m.text)
-def handle_messages(message):
+def handle_messages(message: Message):
     print('message handler categories')
     # kb = InlineKeyboardButton()
     root_categories = Category.get_root_categories()
@@ -58,6 +67,15 @@ def handle_messages(message):
     )
 
 
+@bot.message_handler(func=lambda m: constants.START_KB[constants.SETTINGS] == m.text)
+def handler_settings(message):
+    user = User.objects.get(telegram_id=message.chat.id)
+    bot.send_message(
+        message.chat.id,
+        user.formated_data()
+    )
+
+
 @bot.message_handler(func=lambda m: constants.START_KB[constants.CART] == m.text)
 def handler_message_cart(message):
     print('handler message cart')
@@ -70,7 +88,7 @@ def handler_message_settings(message):
 
 @bot.message_handler(func=lambda m: constants.START_KB[constants.NEWS] == m.text)
 def handler_message_news(message):
-    print('handler message news')
+    # print('handler message news')
     news = News.objects()
     sorted_news = []
 
@@ -99,9 +117,59 @@ def handler_message_prod_with_disc(message):
 
 @bot.callback_query_handler(lambda c: json.loads(c.data)['tag'] == constants.CATEGORY_TAG)
 def handler_category_click(call):
-    print(call)
+    category = Category.objects.get(
+        id=json.loads(call.data)['id']
+    )
+
+    if category.subcategories:
+        kb = inline_kb_from_iterable(constants.CATEGORY_TAG, category.subcategories)
+        bot.edit_message_text(
+            category.title,
+            chat_id=call.message.chat.id,
+            message_id=call.message.id,
+            reply_markup=kb
+        )
+        # bot.send_message(
+        #     call.message.chat.id,
+        #     category.title,
+        #     reply_markup=kb
+        # )
+    else:
+        products = category.get_products()
+        for p in products:
+            kb = InlineKeyboardMarkup()
+            button = InlineKeyboardButton(
+                text=constants.ADD_TO_CART,
+                callback_data=json.dumps(
+                    {
+                        'id': str(p.id),
+                        'tag': constants.PRODUCT_TAG
+                    }
+                )
+            )
+            kb.add(button)
+            description = p.description if p.description else ''
+            bot.send_photo(
+                call.message.chat.id,
+                p.image.read(),
+                caption=f'{p.title}\n{description}',
+                reply_markup=kb
+            )
 
 
-@bot.message_handler(content_types=['text'])
-def handler_test(message):
-    print('handler text')
+@bot.callback_query_handler(lambda c: json.loads(c.data)['tag'] == constants.PRODUCT_TAG)
+def handle_add_to_cart(call):
+    product_id = json.loads(call.data)['id']
+    product = Product.objects.get(id=product_id)
+    user = User.objects.get(telegram_id=call.message.chat.id)
+    cart = user.get_active_cart()
+    cart.add_product(product)
+    bot.answer_callback_query(
+        call.id,
+        'Продукт добавлен в корзину'
+    )
+
+
+# @bot.message_handler(content_types=['text'])
+# def handler_test(message):
+#     print('handler text')
