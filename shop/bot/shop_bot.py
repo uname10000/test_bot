@@ -28,7 +28,7 @@ api.add_resource(CategoryResources, '/category', '/category/<string:id_>')
 def handle_webhook():
     print(request.get_data())
     if request.headers.get('content-type') == 'application/json':
-        json_string = request.get_data()
+        json_string = request.get_data().decode('utf-8')
         update = Update.de_json(json_string)
         bot.process_new_updates([update])
         return ''
