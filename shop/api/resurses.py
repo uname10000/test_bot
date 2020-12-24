@@ -3,14 +3,14 @@ import json
 from flask_restful import Resource, Api, request
 from flask import Flask
 
-from ..models.shop_models import Category
+from ..models.shop_models import Category, Product
 
 
 class CategoryResources(Resource):
-    def get(self, id_=None):
-        print(id_)
-        if id_:
-            cat = Category.objects.get(id=id_)
+    def get(self, cat_id=None):
+        print(cat_id)
+        if cat_id:
+            cat = Category.objects.get(cat_id)
             return json.loads(cat.to_json())
         else:
             cat = Category.objects()
@@ -41,3 +41,57 @@ class CategoryResources(Resource):
         else:
             Category(title=title, description=desc).save()
             return {'Success': f'Category {title} added as root category'}
+
+    def delete(self, cat_id):
+        cat = Category.objects(id=cat_id).first()
+        if cat:
+            print(cat.id)
+            sub_cat = Category.objects(subcategories=cat).first()
+
+            print(sub_cat.subcategories)
+            new_sub_cat = []
+            for sub in sub_cat.subcategories:
+                if sub.id != cat.id:
+                    new_sub_cat.append(sub)
+
+            sub_cat.update(subcategories=new_sub_cat)
+            cat.delete()
+            return {'Success': f'Category {cat_id} was deleted'}
+        else:
+            return {'Error': f'Category {cat_id} not found'}
+
+
+class ProductResource(Resource):
+    def get(self, prod_id=None):
+        if prod_id:
+            product = Product.objects.get(id=prod_id)
+            return json.loads(product.to_json())
+        else:
+            product = Product.objects()
+            return json.loads(product.to_json())
+
+    def post(self):
+        title = request.json.get('title')
+        discount = request.json.get('discount')
+        price = request.json.get('price')
+        category = request.json.get('category')
+        in_stock = request.json.get('in_stock')
+        print(
+            f'title:{title}; discount:{discount}; price:{price} '
+            f'category:{category}; in_stock:{in_stock}'
+        )
+
+        # get category id
+        cat = Category.objects(title=category).first()
+        print(cat)
+
+        if cat:
+            product = Product.objects(title=title).first()
+            if product:
+                return {'Error': f'Product {product.title} already exist'}
+            else:
+                product = Product(title=title, discount=discount, price=price, category=cat.id, in_stock=in_stock)
+                product.save()
+                return {'Success': f'Product {title} added in category {cat.title}'}
+        else:
+            return {'Error': f'Category {category} doesnt exist'}

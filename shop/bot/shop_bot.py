@@ -13,7 +13,7 @@ from ..models.extra_models import News
 from .config import TOKEN, WEBHOOK_URL, WEBHOOK_URI
 from .utils import inline_kb_from_iterable
 from . import constants
-from ..api.resurses import CategoryResources
+from ..api.resurses import CategoryResources, ProductResource
 
 # botname: Shptestbot
 # bot username: Shptest_bot
@@ -21,7 +21,8 @@ bot = TeleBot(TOKEN)
 
 app = Flask(__name__)
 api = Api(app)
-api.add_resource(CategoryResources, '/category', '/category/<string:id_>')
+api.add_resource(CategoryResources, '/category', '/category/<string:cat_id>')
+api.add_resource(ProductResource, '/product', '/product/<string:prod_id>')
 
 
 @app.route(WEBHOOK_URI, methods=['POST'])
