@@ -9,7 +9,7 @@ from flask import Flask, request, abort
 
 from ..models.shop_models import Category, User, Product
 from ..models.extra_models import News
-from .config import TOKEN, WEBHOOK_URL
+from .config import TOKEN, WEBHOOK_URL, WEBHOOK_URI
 from .utils import inline_kb_from_iterable
 from . import constants
 
@@ -20,8 +20,9 @@ bot = TeleBot(TOKEN)
 app = Flask(__name__)
 
 
-@app.route(WEBHOOK_URL)
+@app.route(WEBHOOK_URI, methods=['POST'])
 def handle_webhook():
+    print(request.get_data())
     if request.headers.get('content-type') == 'application/json':
         json_string = request.get_data()
         update = Update.de_json(json_string)
