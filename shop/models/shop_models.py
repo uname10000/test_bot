@@ -27,7 +27,7 @@ class User(me.Document):
 
 class Category(me.Document):
     title = me.StringField(required=True)
-    description = me.StringField(min_length=512)
+    description = me.StringField(min_length=100)
     parent = me.ReferenceField('self')
     subcategories = me.ListField(me.ReferenceField('self'))
 

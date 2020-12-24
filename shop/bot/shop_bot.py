@@ -6,18 +6,22 @@ from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardBut
 from mongoengine import NotUniqueError
 
 from flask import Flask, request, abort
+from flask_restful import Api
 
 from ..models.shop_models import Category, User, Product
 from ..models.extra_models import News
 from .config import TOKEN, WEBHOOK_URL, WEBHOOK_URI
 from .utils import inline_kb_from_iterable
 from . import constants
+from ..api.resurses import CategoryResources
 
 # botname: Shptestbot
 # bot username: Shptest_bot
 bot = TeleBot(TOKEN)
 
 app = Flask(__name__)
+api = Api(app)
+api.add_resource(CategoryResources, '/category', '/category/<string:id_>')
 
 
 @app.route(WEBHOOK_URI, methods=['POST'])
