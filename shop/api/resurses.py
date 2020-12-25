@@ -71,11 +71,22 @@ class ProductResource(Resource):
             return json.loads(product.to_json())
 
     def post(self):
-        title = request.json.get('title')
-        discount = request.json.get('discount')
-        price = request.json.get('price')
-        category = request.json.get('category')
-        in_stock = request.json.get('in_stock')
+        title = request.form.get('title')
+        discount = request.form.get('discount')
+        price = request.form.get('price')
+        category = request.form.get('category')
+        in_stock = request.form.get('in_stock')
+        file = request.files['image']
+        tmp_filename = file.filename
+        file.save(tmp_filename)
+        file.close()
+
+
+        # title = request.json.get('title')
+        # discount = request.json.get('discount')
+        # price = request.json.get('price')
+        # category = request.json.get('category')
+        # in_stock = request.json.get('in_stock')
         print(
             f'title:{title}; discount:{discount}; price:{price} '
             f'category:{category}; in_stock:{in_stock}'
@@ -90,8 +101,20 @@ class ProductResource(Resource):
             if product:
                 return {'Error': f'Product {product.title} already exist'}
             else:
+                b_file = open(tmp_filename, 'rb')
                 product = Product(title=title, discount=discount, price=price, category=cat.id, in_stock=in_stock)
+                product.image.put(b_file, content_type='image/jpeg')
                 product.save()
+                b_file.close()
                 return {'Success': f'Product {title} added in category {cat.title}'}
         else:
             return {'Error': f'Category {category} doesnt exist'}
+
+    def delete(self, prod_id):
+        product = Product.objects(id=prod_id).first()
+
+        if product:
+            product.delete()
+            return {'Success': f'Product with id {prod_id} was deleted'}
+        else:
+            return {'Error': f'Product with id: {prod_id} doesnt exists'}

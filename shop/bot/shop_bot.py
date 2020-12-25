@@ -102,10 +102,10 @@ def handler_settings(message):
 def handler_message_cart(message):
     print('handler message cart')
 
-bot.remove_webhook()
-@bot.message_handler(func=lambda m: constants.START_KB[constants.SETTINGS] == m.text)
-def handler_message_settings(message):
-    print('handler message settings')
+# bot.remove_webhook()
+# @bot.message_handler(func=lambda m: constants.START_KB[constants.SETTINGS] == m.text)
+# def handler_message_settings(message):
+#     print('handler message settings')
 
 
 @bot.message_handler(func=lambda m: constants.START_KB[constants.NEWS] == m.text)
