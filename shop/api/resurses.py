@@ -76,6 +76,7 @@ class ProductResource(Resource):
         price = request.form.get('price')
         category = request.form.get('category')
         in_stock = request.form.get('in_stock')
+        description = request.form.get('description')
         file = request.files['image']
         tmp_filename = file.filename
         file.save(tmp_filename)
@@ -101,8 +102,13 @@ class ProductResource(Resource):
             if product:
                 return {'Error': f'Product {product.title} already exist'}
             else:
+                if not description:
+                    description = ''
                 b_file = open(tmp_filename, 'rb')
-                product = Product(title=title, discount=discount, price=price, category=cat.id, in_stock=in_stock)
+                product = Product(
+                    title=title, discount=discount, price=price, category=cat.id, in_stock=in_stock,
+                    description=description
+                )
                 product.image.put(b_file, content_type='image/jpeg')
                 product.save()
                 b_file.close()
