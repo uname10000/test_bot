@@ -171,7 +171,7 @@ def handler_category_click(call):
             )
             kb.add(button)
             description = p.description if p.description else ''
-            price = p.product_price()
+            price = p.product_price
 
             bot.send_photo(
                 call.message.chat.id,
