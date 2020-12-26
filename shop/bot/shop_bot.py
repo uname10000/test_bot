@@ -134,7 +134,29 @@ def handler_message_news(message):
 
 @bot.message_handler(func=lambda m: constants.START_KB[constants.PRODUCTS_WITH_DISCOUNTS] == m.text)
 def handler_message_prod_with_disc(message):
-    print('handler message prod with dics')
+    products = Product.objects(discount__ne=0)
+
+    for p in products:
+        kb = InlineKeyboardMarkup()
+        button = InlineKeyboardButton(
+            text=constants.ADD_TO_CART,
+            callback_data=json.dumps(
+                {
+                    'id': str(p.id),
+                    'tag': constants.PRODUCT_TAG
+                }
+            )
+        )
+        kb.add(button)
+        description = p.description if p.description else ''
+        price = p.product_price
+
+        bot.send_photo(
+            message.chat.id,
+            p.image.read(),
+            caption=f'{p.title}\n{description}\nЦена:{price}',
+            reply_markup=kb
+        )
 
 
 @bot.callback_query_handler(lambda c: json.loads(c.data)['tag'] == constants.CATEGORY_TAG)
