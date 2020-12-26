@@ -171,10 +171,12 @@ def handler_category_click(call):
             )
             kb.add(button)
             description = p.description if p.description else ''
+            price = p.product_price()
+
             bot.send_photo(
                 call.message.chat.id,
                 p.image.read(),
-                caption=f'{p.title}\n{description}',
+                caption=f'{p.title}\n{description}\nЦена:{price}',
                 reply_markup=kb
             )
 
