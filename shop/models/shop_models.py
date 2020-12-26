@@ -60,7 +60,7 @@ class Parameters(me.EmbeddedDocument):
 
 class Product(me.Document):
     title = me.StringField(required=True, max_length=256)
-    description = me.StringField(min_length=512)
+    description = me.StringField(min_length=10)
     in_stock = me.BooleanField(defautl=True)
     discount = me.IntField(min_value=0, max_value=100, default=0)
     price = me.IntField(required=True)
