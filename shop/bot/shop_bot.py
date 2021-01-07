@@ -357,7 +357,7 @@ def handle_cart_checkout(call):
         f'Спасибо за покупку товаров!'
     )
     bot.send_message(
-        call.id,
+        call.message.chat.id,
         f'Спасибо за покупку товаров!'
     )
 
