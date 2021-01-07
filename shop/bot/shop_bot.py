@@ -101,6 +101,7 @@ def handler_settings(message):
 
 @bot.message_handler(func=lambda m: constants.START_KB[constants.CART] == m.text)
 def handler_message_cart(message):
+
     user = User.objects.get(telegram_id=message.chat.id)
     cart = user.get_active_cart()
 
@@ -352,6 +353,10 @@ def handle_cart_checkout(call):
     cart = user.get_active_cart()
     cart.cart_checkout()
     bot.answer_callback_query(
+        call.id,
+        f'Спасибо за покупку товаров!'
+    )
+    bot.send_message(
         call.id,
         f'Спасибо за покупку товаров!'
     )
