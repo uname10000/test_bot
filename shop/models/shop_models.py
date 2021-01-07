@@ -94,10 +94,12 @@ class Cart(me.Document):
     def delete_product(self, product):
         product_list = []
 
+        # Находим индексы продуктов, которые нужно удалить в списке продуктов
         for i, p in enumerate(self.products.copy()):
             if p == product:
                 product_list.append(i)
 
+        # Удаляем продукты начиная с последнего индекса
         i = len(product_list) - 1
         while True:
             if i < 0:
