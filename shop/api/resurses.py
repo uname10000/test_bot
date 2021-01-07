@@ -3,7 +3,8 @@ import json
 from flask_restful import Resource, Api, request
 from flask import Flask
 
-from ..models.shop_models import Category, Product
+from ..models.shop_models import Category, Product, Cart
+from ..models.extra_models import News
 
 
 class CategoryResources(Resource):
@@ -124,3 +125,56 @@ class ProductResource(Resource):
             return {'Success': f'Product with id {prod_id} was deleted'}
         else:
             return {'Error': f'Product with id: {prod_id} doesnt exists'}
+
+
+class NewsResource(Resource):
+    def get(self, news_id=None):
+        if news_id:
+            news = News.objects.get(id=news_id)
+            return json.loads(news.to_json())
+        else:
+            news = News.objects()
+            return json.loads(news.to_json())
+
+    def post(self):
+        title = request.json.get('title')
+        body = request.json.get('body')
+
+        print(title, body)
+
+        news = News.objects(title=title)
+        if news:
+            return {'Error': f'News with title: {title} exists'}
+        else:
+            news = News(title=title, body=body)
+            news.save()
+            return {'Success': f'News with title: {title} was created'}
+
+    def delete(self, news_id):
+        news = Product.objects(id=news_id).first()
+
+        if news:
+            news.delete()
+            return {'Success': f'News with id {news_id} was deleted'}
+        else:
+            return {'Error': f'News with id: {news_id} doesnt exists'}
+
+
+class CartResource(Resource):
+    def get(self, cart_id=None):
+        print('cart')
+        if cart_id:
+            cart = Cart.objects(id=cart_id)
+            return json.loads(cart.to_json())
+        else:
+            cart = Cart.objects()
+            print('cart.object()')
+            return json.loads(cart.to_json())
+
+    def delete(self, cart_id):
+        cart = Cart.objects(id=cart_id)
+        if cart:
+            cart.delete()
+            return {'Success': f'Cart with id {cart_id} was deleted'}
+        else:
+            return {'Error': f'Cart with id {cart_id} doesnt exists'}

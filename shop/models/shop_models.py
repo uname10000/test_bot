@@ -14,11 +14,13 @@ class User(me.Document):
     def get_active_cart(self):
         cart = Cart.objects(user=self, is_active=True).first()
 
-        if not cart:
-            cart = Cart.objects.create(
-                user=self
-            )
-
+        if cart is None:
+            print('cart is None')
+            # cart = Cart.objects.create(
+            #     user=self
+            # )
+            cart = Cart(user=self)
+            cart.save()
         return cart
 
     def formated_data(self):
@@ -87,4 +89,37 @@ class Cart(me.Document):
         self.products.append(
             product
         )
+        self.save()
+
+    def delete_product(self, product):
+        product_list = []
+
+        for i, p in enumerate(self.products.copy()):
+            if p == product:
+                product_list.append(i)
+
+        i = len(product_list) - 1
+        while True:
+            if i < 0:
+                break
+            self.products.pop(product_list[i])
+            i -= 1
+
+        self.save()
+
+    def increase_product(self, product):
+        self.add_product(product)
+
+    def decrease_product(self, product):
+        product_list = []
+        for i, p in enumerate(self.products.copy()):
+            if p == product:
+                product_list.append(i)
+
+        if product_list:
+            self.products.pop(product_list[(len(product_list) - 1)])
+            self.save()
+
+    def cart_checkout(self):
+        self.is_active = False
         self.save()
