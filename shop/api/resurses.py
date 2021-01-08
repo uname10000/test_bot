@@ -55,10 +55,10 @@ class CategoryResources(Resource):
                 if root_cat:
                     new_cat = Category(title=title, description=description).save()
                     root_cat.add_subcategory(new_cat)
-                    return {'Success': f'Category {title} added in parent {parent}'}
                 else:
                     return {'Error': f'Parent category {parent} doesnt exists'}
             cat.save()
+            return {'Success': f'Category {cat_id} updated'}
         else:
             return {'Error:': f'Category {cat_id} exists'}
 
