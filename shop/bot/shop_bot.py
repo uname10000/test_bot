@@ -3,7 +3,7 @@ import time
 
 from telebot import TeleBot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, Message, Update
-from mongoengine import NotUniqueError
+from mongoengine import NotUniqueError, ValidationError
 
 from flask import Flask, request, abort
 from flask_restful import Api
@@ -13,7 +13,7 @@ from ..models.extra_models import News
 from .config import TOKEN, WEBHOOK_URL, WEBHOOK_URI
 from .utils import inline_kb_from_iterable
 from . import constants
-from ..api.resurses import CategoryResources, ProductResource, NewsResource, CartResource
+from ..api.resurses import CategoryResources, ProductResource, NewsResource, CartResource, UserResource
 
 # botname: Shptestbot
 # bot username: Shptest_bot
@@ -25,6 +25,7 @@ api.add_resource(CategoryResources, '/category', '/category/<string:cat_id>')
 api.add_resource(ProductResource, '/product', '/product/<string:prod_id>')
 api.add_resource(NewsResource, '/news', '/news/<string:news_id>')
 api.add_resource(CartResource, '/cart', '/cart/<string:cart_id>')
+api.add_resource(UserResource, '/user', '/user/<string:user_id>')
 
 
 @app.route(WEBHOOK_URI, methods=['POST'])
@@ -96,6 +97,62 @@ def handler_settings(message):
     bot.send_message(
         message.chat.id,
         user.formated_data()
+    )
+
+    kb = InlineKeyboardMarkup()
+    name_button = InlineKeyboardButton(
+        text='Изменить имя',
+        callback_data=json.dumps(
+            {
+                'tag': constants.CHANGE_SETTINGS_NAME
+            }
+        )
+    )
+
+    nick_button = InlineKeyboardButton(
+        text='Изменить ник',
+        callback_data=json.dumps(
+            {
+                'tag': constants.CHANGE_SETTINGS_NICK
+            }
+        )
+    )
+
+    phone_button = InlineKeyboardButton(
+        text='Изменить номер телефона',
+        callback_data=json.dumps(
+            {
+                'tag': constants.CHANGE_SETTINGS_PHONE
+            }
+        )
+    )
+
+    address_button = InlineKeyboardButton(
+        text='Изменить адрес',
+        callback_data=json.dumps(
+            {
+                'tag': constants.CHANGE_SETTINGS_ADDRESS
+            }
+        )
+    )
+
+    email_button = InlineKeyboardButton(
+        text='Изменить почту',
+        callback_data=json.dumps(
+            {
+                'tag': constants.CHANGE_SETTINGS_EMAIL
+            }
+        )
+    )
+
+    kb.add(name_button, nick_button)
+    kb.add(phone_button)
+    kb.add(address_button, email_button)
+
+    bot.send_message(
+        message.chat.id,
+        text='Изменить настройки:',
+        reply_markup=kb
     )
 
 
@@ -284,10 +341,21 @@ def handler_category_click(call):
             description = p.description if p.description else ''
             price = p.product_price
 
+            params = ''
+            if p.parameters:
+                if p.parameters.height:
+                    params += f'Высота: {str(p.parameters.height)}\n'
+                if p.parameters.width:
+                    params += f'Ширина: {str(p.parameters.width)}\n'
+                if p.parameters.weight:
+                    params += f'Вес: {str(p.parameters.weight)}\n'
+                if p.parameters.additional_description:
+                    params += f'Доп. описание: {str(p.parameters.additional_description)}\n'
+
             bot.send_photo(
                 call.message.chat.id,
                 p.image.read(),
-                caption=f'{p.title}\n{description}\nЦена:{price}',
+                caption=f'{p.title}\n{description}\n{params}Цена:{price}',
                 reply_markup=kb
             )
 
@@ -318,7 +386,6 @@ def handle_delete_product_from_cart(call):
     )
 
 
-
 @bot.callback_query_handler(lambda c: json.loads(c.data)['tag'] == constants.PRODUCT_INCREASE_COUNT)
 def handle_product_increase_count(call):
     product_id = json.loads(call.data)['id']
@@ -347,19 +414,175 @@ def handle_product_decrease_count(call):
 
 @bot.callback_query_handler(lambda c: json.loads(c.data)['tag'] == constants.CART_CHECKOUT)
 def handle_cart_checkout(call):
-    # product_id = json.loads(call.data)['id']
-    # product = Product.objects.get(id=product_id)
     user = User.objects.get(telegram_id=call.message.chat.id)
     cart = user.get_active_cart()
-    cart.cart_checkout()
-    bot.answer_callback_query(
-        call.id,
-        f'Спасибо за покупку товаров!'
-    )
+    # Check home address
+    if user.home_address:
+        print(f'Home address present: {user.home_address}')
+        cart.cart_checkout()
+        bot.answer_callback_query(
+            call.id,
+            f'Спасибо за покупку товаров!'
+        )
+        bot.send_message(
+            call.message.chat.id,
+            f'Спасибо "{user.first_name}" за покупку товаров!\nТовар будет доставлен по адресу: "{user.home_address}"'
+        )
+    else:
+        print(f'Home address not found: {user.home_address}')
+        bot.send_message(
+            call.message.chat.id,
+            f'Введите адрес доставки в Настройках!'
+        )
+
+
+@bot.callback_query_handler(lambda c: json.loads(c.data)['tag'] == constants.CHANGE_SETTINGS_NAME)
+def handle_set_new_name(call):
+    user = User.objects.get(telegram_id=call.message.chat.id)
     bot.send_message(
         call.message.chat.id,
-        f'Спасибо за покупку товаров!'
+        f'Текущее имя пользователя: "{user.username}"\nВведите новое имя пользователя'
     )
 
+    bot.register_next_step_handler(call.message, set_new_name)
 
 
+def set_new_name(message):
+    if message.text == constants.START_KB[constants.CATEGORIES] \
+        or message.text == constants.START_KB[constants.CART] \
+        or message.text == constants.START_KB[constants.SETTINGS] \
+        or message.text == constants.START_KB[constants.NEWS] \
+        or message.text == constants.START_KB[constants.PRODUCTS_WITH_DISCOUNTS]:
+        pass
+    else:
+        user = User.objects.get(telegram_id=message.chat.id)
+        user.update(set__first_name=message.text)
+        user.save()
+
+        bot.send_message(
+            message.chat.id,
+            f'Имя было изменено на {message.text}'
+        )
+
+
+@bot.callback_query_handler(lambda c: json.loads(c.data)['tag'] == constants.CHANGE_SETTINGS_NICK)
+def handle_set_new_nick(call):
+    user = User.objects.get(telegram_id=call.message.chat.id)
+    bot.send_message(
+        call.message.chat.id,
+        f'Текущее ник пользователя: "{user.username}"\nВведите новое ник пользователя'
+    )
+
+    bot.register_next_step_handler(call.message, set_new_nick)
+
+
+def set_new_nick(message):
+    if message.text == constants.START_KB[constants.CATEGORIES] \
+        or message.text == constants.START_KB[constants.CART] \
+        or message.text == constants.START_KB[constants.SETTINGS] \
+        or message.text == constants.START_KB[constants.NEWS] \
+        or message.text == constants.START_KB[constants.PRODUCTS_WITH_DISCOUNTS]:
+        pass
+    else:
+        user = User.objects.get(telegram_id=message.chat.id)
+        user.update(set__username=message.text)
+        user.save()
+
+        bot.send_message(
+            message.chat.id,
+            f'Имя было изменено на {message.text}'
+        )
+
+
+@bot.callback_query_handler(lambda c: json.loads(c.data)['tag'] == constants.CHANGE_SETTINGS_PHONE)
+def handle_set_new_phone(call):
+    user = User.objects.get(telegram_id=call.message.chat.id)
+    bot.send_message(
+        call.message.chat.id,
+        f'Текущее телефон пользователя: "{user.phone_number}"\nВведите новый телефон пользователя'
+    )
+
+    bot.register_next_step_handler(call.message, set_new_phone_number)
+
+
+def set_new_phone_number(message):
+    if message.text == constants.START_KB[constants.CATEGORIES] \
+        or message.text == constants.START_KB[constants.CART] \
+        or message.text == constants.START_KB[constants.SETTINGS] \
+        or message.text == constants.START_KB[constants.NEWS] \
+        or message.text == constants.START_KB[constants.PRODUCTS_WITH_DISCOUNTS]:
+        pass
+    else:
+        user = User.objects.get(telegram_id=message.chat.id)
+        user.update(set__phone_number=message.text)
+        user.save()
+
+        bot.send_message(
+            message.chat.id,
+            f'Имя было изменено на {message.text}'
+        )
+
+
+@bot.callback_query_handler(lambda c: json.loads(c.data)['tag'] == constants.CHANGE_SETTINGS_ADDRESS)
+def handle_set_new_address(call):
+    user = User.objects.get(telegram_id=call.message.chat.id)
+    bot.send_message(
+        call.message.chat.id,
+        f'Текущей адрес пользователя: "{user.home_address}"\nВведите новый адрес пользователя'
+    )
+
+    bot.register_next_step_handler(call.message, set_new_address)
+
+
+def set_new_address(message):
+    if message.text == constants.START_KB[constants.CATEGORIES] \
+        or message.text == constants.START_KB[constants.CART] \
+        or message.text == constants.START_KB[constants.SETTINGS] \
+        or message.text == constants.START_KB[constants.NEWS] \
+        or message.text == constants.START_KB[constants.PRODUCTS_WITH_DISCOUNTS]:
+        pass
+    else:
+        user = User.objects.get(telegram_id=message.chat.id)
+        user.update(set__home_address=message.text)
+        user.save()
+
+        bot.send_message(
+            message.chat.id,
+            f'Имя было изменено на {message.text}'
+        )
+
+
+@bot.callback_query_handler(lambda c: json.loads(c.data)['tag'] == constants.CHANGE_SETTINGS_EMAIL)
+def handle_set_new_email(call):
+    user = User.objects.get(telegram_id=call.message.chat.id)
+    bot.send_message(
+        call.message.chat.id,
+        f'Текущей электронный адрес пользователя: "{user.email}"\nВведите новый электронный адрес пользователя'
+    )
+
+    bot.register_next_step_handler(call.message, set_new_email)
+
+
+def set_new_email(message):
+    if message.text == constants.START_KB[constants.CATEGORIES] \
+        or message.text == constants.START_KB[constants.CART] \
+        or message.text == constants.START_KB[constants.SETTINGS] \
+        or message.text == constants.START_KB[constants.NEWS] \
+        or message.text == constants.START_KB[constants.PRODUCTS_WITH_DISCOUNTS]:
+        pass
+    else:
+        user = User.objects.get(telegram_id=message.chat.id)
+        try:
+            user.update(set__email=message.text.lower())
+            user.save()
+        except ValidationError as e:
+            print(e.message)
+            bot.send_message(
+                message.chat.id,
+                f'Ошибка изменения адреса: {e.message}'
+            )
+        else:
+            bot.send_message(
+                message.chat.id,
+                f'Имя было изменено на {message.text.lower()}'
+            )

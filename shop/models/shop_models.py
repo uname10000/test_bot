@@ -7,15 +7,15 @@ class User(me.Document):
     telegram_id = me.IntField(primary_key=True)
     username = me.StringField(min_length=2, max_length=128)
     first_name = me.StringField(min_length=2, max_length=128)
-    prone_number = me.StringField(max_length=12)
+    phone_number = me.StringField(max_length=12)
     email = me.EmailField()
+    home_address = me.StringField(max_length=20)
     is_block = me.BooleanField(default=False)
 
     def get_active_cart(self):
         cart = Cart.objects(user=self, is_active=True).first()
 
         if cart is None:
-            print('cart is None')
             # cart = Cart.objects.create(
             #     user=self
             # )
@@ -24,7 +24,8 @@ class User(me.Document):
         return cart
 
     def formated_data(self):
-        return f'id - {self.telegram_id}\nnickname - {self.username}\nname - {self.first_name}\nEmail - {self.email}\nPhone number - {self.prone_number}'
+        return f'ID - {self.telegram_id}\nNickname - {self.username}\nName - {self.first_name}\n' \
+               f'Email - {self.email}\nPhone number - {self.phone_number}\nAddress - {self.home_address}'
 
 
 class Category(me.Document):
