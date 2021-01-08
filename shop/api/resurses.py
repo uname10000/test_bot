@@ -200,7 +200,7 @@ class ProductResource(Resource):
                     product.parameters.width = float(param_width)
             if param_additional_description:
                 if product.parameters:
-                    product.parameters.param_additional_description = str(param_additional_description)
+                    product.parameters.additional_description = str(param_additional_description)
                 else:
                     product.parameters = Parameters()
                     product.parameters.additional_description = str(param_additional_description)
