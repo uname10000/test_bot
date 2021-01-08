@@ -164,6 +164,7 @@ class ProductResource(Resource):
                 product.update(set__discount=discount)
             if price:
                 product.update(set__price=price)
+
             if category:
                 cat = Category.objects(title=category).first()
                 if cat:
@@ -202,7 +203,7 @@ class ProductResource(Resource):
                     product.parameters.param_additional_description = str(param_additional_description)
                 else:
                     product.parameters = Parameters()
-                    product.parameters.param_additional_description = str(param_additional_description)
+                    product.parameters.additional_description = str(param_additional_description)
 
             product.save()
 
