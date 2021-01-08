@@ -50,17 +50,17 @@ class CategoryResources(Resource):
                 cat.update(set__title=title)
             if description:
                 cat.update(set__description=description)
-            # if parent:
-            #     root_cat = Category.objects(title=parent).first()
-            #     if root_cat:
-            #         new_cat = Category(title=title, description=description).save()
-            #         root_cat.add_subcategory(new_cat)
-            #     else:
-            #         return {'Error': f'Parent category {parent} doesnt exists'}
-            cat.save()
+            if parent:
+                root_cat = Category.objects(title=parent).first()
+                if root_cat:
+                    new_cat = Category(title=title, description=description).save()
+                    root_cat.add_subcategory(new_cat)
+                else:
+                    return {'Error': f'Parent category {parent} doesnt exists'}
+            # cat.save()
             return {'Success': f'Category {cat_id} updated'}
         else:
-            return {'Error:': f'Category {cat_id} exists'}
+            return {'Error:': f'Category {cat_id} doesnt exists'}
 
     def delete(self, cat_id):
         cat = Category.objects(id=cat_id).first()
