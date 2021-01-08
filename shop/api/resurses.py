@@ -10,7 +10,7 @@ from ..models.extra_models import News
 class CategoryResources(Resource):
     def get(self, cat_id=None):
         if cat_id:
-            cat = Category.objects.get(cat_id)
+            cat = Category.objects.get(id=cat_id)
             return json.loads(cat.to_json())
         else:
             cat = Category.objects()
