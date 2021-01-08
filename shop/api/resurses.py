@@ -40,7 +40,7 @@ class CategoryResources(Resource):
             return {'Success': f'Category {title} added as root category'}
 
     def put(self, cat_id):
-        cat = Category.objects(id=cat_id)
+        cat = Category.objects(id=cat_id).first()
         if cat:
             title = request.json.get('title')
             description = request.json.get('description')
@@ -57,7 +57,7 @@ class CategoryResources(Resource):
                     root_cat.add_subcategory(new_cat)
                 else:
                     return {'Error': f'Parent category {parent} doesnt exists'}
-            # cat.save()
+            cat.save()
             return {'Success': f'Category {cat_id} updated'}
         else:
             return {'Error:': f'Category {cat_id} doesnt exists'}
