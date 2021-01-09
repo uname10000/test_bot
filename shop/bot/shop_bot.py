@@ -422,6 +422,25 @@ def handle_cart_checkout(call):
     cart = user.get_active_cart()
     # Check home address
     if user.home_address:
+
+        products_grouped_by_id = dict()
+        for p in cart.products:
+            if p.id in products_grouped_by_id.keys():
+                products_grouped_by_id[p.id]['count'] += 1
+            else:
+                products_grouped_by_id[p.id] = {
+                    'title': p.title,
+                    'count': 1,
+                    'price': p.product_price,
+                    'image': p.image
+                }
+
+        text = ''
+        total_price = 0
+        for k, v in products_grouped_by_id.items():
+            text += f'{v["title"]} - {v["count"]}шт. {v["price"]}\n'
+            total_price += v['price']
+
         cart.cart_checkout()
         bot.answer_callback_query(
             call.id,
@@ -429,7 +448,8 @@ def handle_cart_checkout(call):
         )
         bot.send_message(
             call.message.chat.id,
-            f'Спасибо "{user.first_name}" за покупку товаров!\nТовар будет доставлен по адресу: "{user.home_address}"'
+            f'{text}Полная стоимость: {total_price}\n\nСпасибо "{user.first_name}" за покупку товаров!\n'
+            f'Товар будет доставлен по адресу: "{user.home_address}"'
         )
     else:
         bot.send_message(
