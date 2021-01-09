@@ -224,7 +224,7 @@ def handler_message_cart(message):
     total_price = 0
 
     for k, v in products_grouped_by_id.items():
-        total_price += v['price']
+        total_price += v['price'] * v['count']
 
     kb = InlineKeyboardMarkup(row_width=1)
     checkout_button = InlineKeyboardButton(
@@ -439,7 +439,7 @@ def handle_cart_checkout(call):
         total_price = 0
         for k, v in products_grouped_by_id.items():
             text += f'{v["title"]} - {v["count"]}шт. Стоимость: {v["price"] * v["count"]}\n'
-            total_price += v['price']
+            total_price += v['price'] * v['count']
 
         cart.cart_checkout()
         bot.answer_callback_query(
