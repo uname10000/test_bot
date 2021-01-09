@@ -11,7 +11,7 @@ from flask_restful import Api
 from ..models.shop_models import Category, User, Product
 from ..models.extra_models import News
 from .config import TOKEN, WEBHOOK_URL, WEBHOOK_URI
-from .utils import inline_kb_from_iterable
+from .utils import inline_kb_from_iterable, is_start_button_pressed
 from . import constants
 from ..api.resurses import CategoryResources, ProductResource, NewsResource, CartResource, UserResource
 
@@ -30,7 +30,7 @@ api.add_resource(UserResource, '/user', '/user/<string:user_id>')
 
 @app.route(WEBHOOK_URI, methods=['POST'])
 def handle_webhook():
-    print(request.get_data())
+    # print(request.get_data())
     if request.headers.get('content-type') == 'application/json':
         json_string = request.get_data().decode('utf-8')
         update = Update.de_json(json_string)
@@ -165,7 +165,6 @@ def handler_message_cart(message):
     products_grouped_by_id = dict()
     for p in cart.products:
         if p.id in products_grouped_by_id.keys():
-            products_grouped_by_id[p.id]['title'] = p.title
             products_grouped_by_id[p.id]['count'] += 1
         else:
             products_grouped_by_id[p.id] = {
@@ -238,15 +237,20 @@ def handler_message_cart(message):
         )
     )
 
-    # Если нет товаров - кнопка "Оформить заказ" не нужна
     if products_grouped_by_id:
         kb.add(checkout_button)
 
-    bot.send_message(
-        message.chat.id,
-        f'Стоимость заказа: {total_price}\nЖелаете оформить заказ?',
-        reply_markup=kb
-    )
+        bot.send_message(
+            message.chat.id,
+            f'Стоимость заказа: {total_price}\nЖелаете оформить заказ?',
+            reply_markup=kb
+        )
+    else:
+        bot.send_message(
+            message.chat.id,
+            f'В корзине нет товаров',
+            reply_markup=kb
+        )
 
 
 @bot.message_handler(func=lambda m: constants.START_KB[constants.NEWS] == m.text)
@@ -418,7 +422,6 @@ def handle_cart_checkout(call):
     cart = user.get_active_cart()
     # Check home address
     if user.home_address:
-        print(f'Home address present: {user.home_address}')
         cart.cart_checkout()
         bot.answer_callback_query(
             call.id,
@@ -429,7 +432,6 @@ def handle_cart_checkout(call):
             f'Спасибо "{user.first_name}" за покупку товаров!\nТовар будет доставлен по адресу: "{user.home_address}"'
         )
     else:
-        print(f'Home address not found: {user.home_address}')
         bot.send_message(
             call.message.chat.id,
             f'Введите адрес доставки в Настройках!'
@@ -448,13 +450,7 @@ def handle_set_new_name(call):
 
 
 def set_new_name(message):
-    if message.text == constants.START_KB[constants.CATEGORIES] \
-        or message.text == constants.START_KB[constants.CART] \
-        or message.text == constants.START_KB[constants.SETTINGS] \
-        or message.text == constants.START_KB[constants.NEWS] \
-        or message.text == constants.START_KB[constants.PRODUCTS_WITH_DISCOUNTS]:
-        pass
-    else:
+    if not is_start_button_pressed(message):
         user = User.objects.get(telegram_id=message.chat.id)
         user.update(set__first_name=message.text)
         user.save()
@@ -470,27 +466,21 @@ def handle_set_new_nick(call):
     user = User.objects.get(telegram_id=call.message.chat.id)
     bot.send_message(
         call.message.chat.id,
-        f'Текущее ник пользователя: "{user.username}"\nВведите новое ник пользователя'
+        f'Текущее ник пользователя: "{user.username}"\nВведите новый ник пользователя'
     )
 
     bot.register_next_step_handler(call.message, set_new_nick)
 
 
 def set_new_nick(message):
-    if message.text == constants.START_KB[constants.CATEGORIES] \
-        or message.text == constants.START_KB[constants.CART] \
-        or message.text == constants.START_KB[constants.SETTINGS] \
-        or message.text == constants.START_KB[constants.NEWS] \
-        or message.text == constants.START_KB[constants.PRODUCTS_WITH_DISCOUNTS]:
-        pass
-    else:
+    if not is_start_button_pressed(message):
         user = User.objects.get(telegram_id=message.chat.id)
         user.update(set__username=message.text)
         user.save()
 
         bot.send_message(
             message.chat.id,
-            f'Имя было изменено на {message.text}'
+            f'Ник пользователя был изменен на {message.text}'
         )
 
 
@@ -499,27 +489,21 @@ def handle_set_new_phone(call):
     user = User.objects.get(telegram_id=call.message.chat.id)
     bot.send_message(
         call.message.chat.id,
-        f'Текущее телефон пользователя: "{user.phone_number}"\nВведите новый телефон пользователя'
+        f'Текущей телефон пользователя: "{user.phone_number}"\nВведите новый телефон пользователя'
     )
 
     bot.register_next_step_handler(call.message, set_new_phone_number)
 
 
 def set_new_phone_number(message):
-    if message.text == constants.START_KB[constants.CATEGORIES] \
-        or message.text == constants.START_KB[constants.CART] \
-        or message.text == constants.START_KB[constants.SETTINGS] \
-        or message.text == constants.START_KB[constants.NEWS] \
-        or message.text == constants.START_KB[constants.PRODUCTS_WITH_DISCOUNTS]:
-        pass
-    else:
+    if not is_start_button_pressed(message):
         user = User.objects.get(telegram_id=message.chat.id)
         user.update(set__phone_number=message.text)
         user.save()
 
         bot.send_message(
             message.chat.id,
-            f'Имя было изменено на {message.text}'
+            f'Телефон был изменен на: {message.text}'
         )
 
 
@@ -535,20 +519,14 @@ def handle_set_new_address(call):
 
 
 def set_new_address(message):
-    if message.text == constants.START_KB[constants.CATEGORIES] \
-        or message.text == constants.START_KB[constants.CART] \
-        or message.text == constants.START_KB[constants.SETTINGS] \
-        or message.text == constants.START_KB[constants.NEWS] \
-        or message.text == constants.START_KB[constants.PRODUCTS_WITH_DISCOUNTS]:
-        pass
-    else:
+    if not is_start_button_pressed(message):
         user = User.objects.get(telegram_id=message.chat.id)
         user.update(set__home_address=message.text)
         user.save()
 
         bot.send_message(
             message.chat.id,
-            f'Имя было изменено на {message.text}'
+            f'Адрес пользователя был изменен на: {message.text}'
         )
 
 
@@ -564,19 +542,12 @@ def handle_set_new_email(call):
 
 
 def set_new_email(message):
-    if message.text == constants.START_KB[constants.CATEGORIES] \
-        or message.text == constants.START_KB[constants.CART] \
-        or message.text == constants.START_KB[constants.SETTINGS] \
-        or message.text == constants.START_KB[constants.NEWS] \
-        or message.text == constants.START_KB[constants.PRODUCTS_WITH_DISCOUNTS]:
-        pass
-    else:
+    if not is_start_button_pressed(message):
         user = User.objects.get(telegram_id=message.chat.id)
         try:
             user.update(set__email=message.text.lower())
             user.save()
         except ValidationError as e:
-            print(e.message)
             bot.send_message(
                 message.chat.id,
                 f'Ошибка изменения адреса: {e.message}'
@@ -584,5 +555,5 @@ def set_new_email(message):
         else:
             bot.send_message(
                 message.chat.id,
-                f'Имя было изменено на {message.text.lower()}'
+                f'Электронный адрес был изменен на: {message.text.lower()}'
             )

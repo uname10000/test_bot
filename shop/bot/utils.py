@@ -2,6 +2,8 @@ import json
 
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from . import constants
+
 
 def inline_kb_from_iterable(
         tag,
@@ -27,3 +29,14 @@ def inline_kb_from_iterable(
     kb = InlineKeyboardMarkup()
     kb.add(*buttons)
     return kb
+
+
+def is_start_button_pressed(message):
+    if message.text == constants.START_KB[constants.CATEGORIES] \
+        or message.text == constants.START_KB[constants.CART] \
+        or message.text == constants.START_KB[constants.SETTINGS] \
+        or message.text == constants.START_KB[constants.NEWS] \
+        or message.text == constants.START_KB[constants.PRODUCTS_WITH_DISCOUNTS]:
+        return True
+    else:
+        return False
