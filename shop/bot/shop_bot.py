@@ -438,7 +438,7 @@ def handle_cart_checkout(call):
         text = ''
         total_price = 0
         for k, v in products_grouped_by_id.items():
-            text += f'{v["title"]} - {v["count"]}шт. {v["price"]}\n'
+            text += f'{v["title"]} - {v["count"]}шт. Стоимость: {v["price"] * v["count"]}\n'
             total_price += v['price']
 
         cart.cart_checkout()
